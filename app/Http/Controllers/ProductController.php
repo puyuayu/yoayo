@@ -43,7 +43,7 @@ class ProductController extends Controller
     {
         try {
             $product->load('category');
-            return view('products.show', compact('product'));
+            return view('customer.products.show', compact('product'));
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal memuat detail produk: ' . $e->getMessage()]);
         }
