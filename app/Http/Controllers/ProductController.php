@@ -17,7 +17,7 @@ class ProductController extends Controller
     {
         try {
             $products = Product::with('category')->where('stock', '>', 0)->latest()->get();
-            return view('products.index', compact('products'));
+            return view('customer.products.index', compact('products'));
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal memuat data produk: ' . $e->getMessage()]);
         }

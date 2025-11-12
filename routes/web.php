@@ -69,7 +69,7 @@ Route::middleware('auth')->group(function () {
     // Profile customer
     Route::get('/customer/profile', [CustomerController::class, 'profile'])->name('customer.profile');
     Route::put('/customer/profile', [CustomerController::class, 'updateProfile'])->name('customer.profile.update');
-    
+
     // Route dashboard lama (redirect ke customer dashboard)
     Route::get('/dashboard', function () {
         return redirect()->route('customer.dashboard');
