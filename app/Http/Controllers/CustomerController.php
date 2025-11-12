@@ -7,31 +7,34 @@ use App\Models\Product;
 use App\Models\Categories;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class CustomerController extends Controller
 {
-    // Dashboard customer
+    // Dashboard customer - fokus produk
     public function dashboard()
     {
         try {
             $user = Auth::user();
-
+            
+            // Stats sederhana
             $stats = [
                 'total_orders' => Order::where('user_id', $user->id)->count(),
                 'pending_orders' => Order::where('user_id', $user->id)->where('status', 'pending')->count(),
             ];
 
+            // Featured products - produk terbaru
             $featured_products = Product::with('category')
                 ->where('stock', '>', 0)
                 ->latest()
                 ->take(8)
                 ->get();
 
+            // Products by category
             $categories_with_products = Categories::with(['products' => function($query) {
                 $query->where('stock', '>', 0)->take(4);
             }])->get();
 
+            // Recent orders
             $recent_orders = Order::where('user_id', $user->id)
                 ->with('product')
                 ->latest()
@@ -39,8 +42,8 @@ class CustomerController extends Controller
                 ->get();
 
             return view('customer.dashboard', compact(
-                'stats',
-                'featured_products',
+                'stats', 
+                'featured_products', 
                 'categories_with_products',
                 'recent_orders'
             ));
