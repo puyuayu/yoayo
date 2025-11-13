@@ -13,7 +13,7 @@
             <img src="https://cdn-icons-png.flaticon.com/512/2038/2038854.png" width="100" alt="no orders">
             <h5 class="mt-3 text-secondary">Belum ada pesanan</h5>
             <p class="text-muted">Ayo pesan dessert favoritmu sekarang juga 🍰</p>
-            <a href="{{ route('customer.products') }}" class="btn btn-primary">
+            <a href="{{ route('products.index') }}" class="btn btn-primary">
                 <i class="bi bi-shop"></i> Lihat Produk
             </a>
         </div>
@@ -33,43 +33,58 @@
                 </thead>
                 <tbody>
                     @foreach ($orders as $index => $order)
-                    <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $order->created_at->format('d M Y') }}</td>
-                        <td>
-                            @foreach ($order->orderItems as $item)
-                                <div>{{ $item->product->nama_produk }} ({{ $item->jumlah }})</div>
-                            @endforeach
-                        </td>
-                        <td class="text-center">{{ $order->orderItems->sum('jumlah') }}</td>
-                        <td>Rp {{ number_format($order->total_harga, 0, ',', '.') }}</td>
-                        <td>
-                            @if ($order->status == 'pending')
-                                <span class="badge bg-warning text-dark">Pending</span>
-                            @elseif ($order->status == 'proses')
-                                <span class="badge bg-primary">Diproses</span>
-                            @elseif ($order->status == 'selesai')
-                                <span class="badge bg-success">Selesai</span>
-                            @else
-                                <span class="badge bg-danger">Dibatalkan</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            <a href="{{ route('customer.orders.show', $order->id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> Detail
-                            </a>
-                        </td>
-                    </tr>
+                        <tr>
+                            <td class="text-center">{{ $index + 1 }}</td>
+                            <td>{{ optional($order->created_at)->format('d M Y') }}</td>
+
+                            {{-- Produk + jumlah ringkas di kolom produk --}}
+                            <td>{{ $order->product->name ?? '-' }} ({{ $order->quantity ?? 0 }})</td>
+
+                            {{-- Kolom jumlah murni --}}
+                            <td class="text-center">{{ $order->quantity ?? '-' }}</td>
+
+                            {{-- Pastikan pakai field yang benar dari DB: total_price --}}
+                            <td>Rp {{ number_format((float) ($order->total_price ?? 0), 0, ',', '.') }}</td>
+
+                            {{-- Status mengikuti enum di controller: pending|processing|completed|cancelled --}}
+                            <td>
+                                @switch($order->status)
+                                    @case('pending')
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        @break
+                                    @case('processing')
+                                        <span class="badge bg-primary">Diproses</span>
+                                        @break
+                                    @case('completed')
+                                        <span class="badge bg-success">Selesai</span>
+                                        @break
+                                    @case('cancelled')
+                                        <span class="badge bg-danger">Dibatalkan</span>
+                                        @break
+                                    @default
+                                        <span class="badge bg-secondary">{{ ucfirst($order->status ?? 'unknown') }}</span>
+                                @endswitch
+                            </td>
+
+                            <td class="text-center">
+                                <a href="{{ route('orders.show', $order->id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Detail
+                                </a>
+                                @if (in_array($order->status, ['pending', 'processing']))
+                                    <form action="{{ route('orders.cancel', $order->id) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Batalkan pesanan ini?')">
+                                            Batal
+                                        </button>
+                                    </form>
+                                @endif
+                            </td>
+                        </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
     @endif
 </div>
-
-<footer class="mt-5 py-3 text-center" style="background-color: #f8f9fa;">
-    <small class="text-muted">
-        © 2025 Dessertique — Semua Hak Dilindungi.
-    </small>
-</footer>
 @endsection
