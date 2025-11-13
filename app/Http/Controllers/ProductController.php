@@ -7,84 +7,95 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
-    /**
-     * === Daftar produk untuk public/customer ===
-     */
-    public function index()
+    /** ===================== PUBLIC / CUSTOMER ===================== */
+
+    // List produk (bisa difilter & search)
+    public function index(Request $request)
     {
         try {
-            $products = Product::with('category')->where('stock', '>', 0)->latest()->get();
+            $q = Product::with('category')
+                ->where('stock', '>', 0)
+                ->latest();
+
+            if ($request->filled('category_id')) {
+                $q->where('category_id', $request->category_id);
+            }
+            if ($request->filled('search')) {
+                $term = $request->search;
+                $q->where(function ($w) use ($term) {
+                    $w->where('name', 'like', "%{$term}%")
+                      ->orWhere('description', 'like', "%{$term}%");
+                });
+            }
+
+            $products = $q->get()->each->append('image_url'); // supaya image_url tersedia
             return view('customer.products.index', compact('products'));
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal memuat data produk: ' . $e->getMessage()]);
         }
     }
 
-    /**
-     * === Daftar produk untuk admin ===
-     */
-    public function adminIndex()
-    {
-        try {
-            $products = Product::with('category')->latest()->get();
-            return view('admin.products.index', compact('products'));
-        } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Gagal memuat data produk: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * === Detail produk untuk public ===
-     */
+    // Detail produk
     public function show(Product $product)
     {
         try {
             $product->load('category');
+            $product->append('image_url');
             return view('customer.products.show', compact('product'));
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal memuat detail produk: ' . $e->getMessage()]);
         }
     }
 
-    /**
-     * === Form tambah produk (khusus admin) ===
-     */
+    /** ========================== ADMIN =========================== */
+
+    public function adminIndex()
+    {
+        try {
+            $products = Product::with('category')->latest()->get()->each->append('image_url');
+            return view('admin.products.index', compact('products'));
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Gagal memuat data produk: ' . $e->getMessage()]);
+        }
+    }
+
     public function create()
     {
-        if (!Auth::check() || Auth::user()->role !== 'admin') {
-            abort(403);
-        }
-
+        if (!Auth::check() || Auth::user()->role !== 'admin') abort(403);
         $categories = Categories::all();
         return view('admin.products.create', compact('categories'));
     }
 
-    /**
-     * === Simpan produk baru (admin only) ===
-     */
     public function store(Request $request)
     {
         try {
-            if (!Auth::check() || Auth::user()->role !== 'admin') {
-                abort(403);
-            }
+            if (!Auth::check() || Auth::user()->role !== 'admin') abort(403);
 
-            $request->validate([
+            $validated = $request->validate([
                 'category_id' => 'required|exists:categories,id',
-                'name' => 'required|string|max:255',
+                'name'        => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'stock' => 'required|integer|min:0',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'price'       => 'required|numeric|min:0',
+                'stock'       => 'required|integer|min:0',
+                'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
             ]);
 
-            $data = $request->except('image');
+            // siapkan data tanpa file
+            $data = collect($validated)->except('image')->toArray();
 
+            // simpan file jika ada
             if ($request->hasFile('image')) {
-                $data['image'] = $request->file('image')->store('products', 'public');
+                $file   = $request->file('image');
+                $name   = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
+                $ext    = $file->getClientOriginalExtension();
+                $fname  = uniqid().'_'.$name.'.'.$ext;
+
+                // tersimpan ke storage/app/public/products/xxx
+                $data['image'] = $file->storeAs('products', $fname, 'public');
             }
 
             Product::create($data);
@@ -95,45 +106,42 @@ class ProductController extends Controller
         }
     }
 
-    /**
-     * === Form edit produk (admin only) ===
-     */
     public function edit(Product $product)
     {
-        if (!Auth::check() || Auth::user()->role !== 'admin') {
-            abort(403);
-        }
-
+        if (!Auth::check() || Auth::user()->role !== 'admin') abort(403);
         $categories = Categories::all();
+        $product->append('image_url');
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
-    /**
-     * === Update produk (admin only) ===
-     */
     public function update(Request $request, Product $product)
     {
         try {
-            if (!Auth::check() || Auth::user()->role !== 'admin') {
-                abort(403);
-            }
+            if (!Auth::check() || Auth::user()->role !== 'admin') abort(403);
 
-            $request->validate([
+            $validated = $request->validate([
                 'category_id' => 'required|exists:categories,id',
-                'name' => 'required|string|max:255',
+                'name'        => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'stock' => 'required|integer|min:0',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'price'       => 'required|numeric|min:0',
+                'stock'       => 'required|integer|min:0',
+                'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
             ]);
 
-            $data = $request->except('image');
+            $data = collect($validated)->except('image')->toArray();
 
             if ($request->hasFile('image')) {
-                if ($product->image) {
+                // hapus yang lama kalau ada & file-nya eksis
+                if ($product->image && Storage::disk('public')->exists($product->image)) {
                     Storage::disk('public')->delete($product->image);
                 }
-                $data['image'] = $request->file('image')->store('products', 'public');
+
+                $file   = $request->file('image');
+                $name   = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
+                $ext    = $file->getClientOriginalExtension();
+                $fname  = uniqid().'_'.$name.'.'.$ext;
+
+                $data['image'] = $file->storeAs('products', $fname, 'public');
             }
 
             $product->update($data);
@@ -144,17 +152,12 @@ class ProductController extends Controller
         }
     }
 
-    /**
-     * === Hapus produk (admin only) ===
-     */
     public function destroy(Product $product)
     {
         try {
-            if (!Auth::check() || Auth::user()->role !== 'admin') {
-                abort(403);
-            }
+            if (!Auth::check() || Auth::user()->role !== 'admin') abort(403);
 
-            if ($product->image) {
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
                 Storage::disk('public')->delete($product->image);
             }
 
