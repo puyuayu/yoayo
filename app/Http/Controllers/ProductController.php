@@ -17,11 +17,7 @@ class ProductController extends Controller
     {
         try {
             $products = Product::with('category')->where('stock', '>', 0)->latest()->get();
-<<<<<<< HEAD
-            return view('products.index', compact('products'));
-=======
             return view('customer.products.index', compact('products'));
->>>>>>> acd05b188080eb231bbf45dd847536c94c2d9235
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal memuat data produk: ' . $e->getMessage()]);
         }
@@ -47,11 +43,7 @@ class ProductController extends Controller
     {
         try {
             $product->load('category');
-<<<<<<< HEAD
-            return view('products.show', compact('product'));
-=======
             return view('customer.products.show', compact('product'));
->>>>>>> acd05b188080eb231bbf45dd847536c94c2d9235
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal memuat detail produk: ' . $e->getMessage()]);
         }

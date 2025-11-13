@@ -64,6 +64,8 @@ Route::get('products/{product}', [ProductController::class, 'show'])->name('prod
 // Customer Routes - YANG DIPERBAIKI
 Route::middleware('auth')->group(function () {
     // Dashboard customer dengan controller
+    Route::get('/customer/products', [ProductController::class, 'index'])
+    ->name('customer.products');
     Route::get('/customer/dashboard', [CustomerController::class, 'dashboard'])->name('customer.dashboard');
     
     // Profile customer

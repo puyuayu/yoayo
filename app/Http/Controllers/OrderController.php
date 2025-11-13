@@ -18,11 +18,7 @@ class OrderController extends Controller
             }
 
             $orders = Order::where('user_id', Auth::id())->with('product')->latest()->get();
-<<<<<<< HEAD
-            return view('orders.index', compact('orders'));
-=======
             return view('customer.orders', compact('orders'));
->>>>>>> acd05b188080eb231bbf45dd847536c94c2d9235
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal memuat data: ' . $e->getMessage()]);
         }
