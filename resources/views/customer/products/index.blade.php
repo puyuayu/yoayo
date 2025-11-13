@@ -22,9 +22,7 @@
                             <p class="fw-bold text-primary">Rp{{ number_format($product->price, 0, ',', '.') }}</p>
                         </div>
 
-                        <div class="card-footer bg-white border-0 text-center">
-                            <a href="#" class="btn btn-sm btn-outline-primary w-100">Pesan Sekarang</a>
-                        </div>
+                        
                     </div>
                 </div>
             @endforeach

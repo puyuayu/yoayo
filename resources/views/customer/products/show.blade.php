@@ -23,7 +23,7 @@
             <h4 class="text-primary mt-4">Rp{{ number_format($product->price, 0, ',', '.') }}</h4>
             <p class="text-muted">Stok: {{ $product->stock }}</p>
 
-            <a href="#" class="btn btn-primary mt-3">🛒 Pesan Sekarang</a>
+            
             <a href="{{ url()->previous() }}" class="btn btn-outline-secondary mt-3">⬅️ Kembali</a>
         </div>
     </div>
